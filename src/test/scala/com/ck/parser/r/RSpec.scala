@@ -100,4 +100,10 @@ aa """) should be(Success(Com("adf ")))
       R(" 1 ") should be(Success(Integer(1)))
     }
   }
+  
+  "a hexidecimal constant" - {
+    "if valid should parse" in {
+      R("0xDEAF") should be(Success(Integer(java.lang.Integer.parseInt("DEAF", 16))))
+    }
+  }
 }

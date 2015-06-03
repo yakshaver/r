@@ -26,7 +26,6 @@ object Nan extends E
 object True extends E
 object False extends E
 
-
 /**
  * This Parsing Expression Grammar parses a subset of the R language.
  */
@@ -92,11 +91,13 @@ class R(val input: ParserInput) extends Parser {
   
   // Tokens: 10.3
   // Constants: 10.3.1
-  def Constants = rule { SpecialConstants | BooleanConstants }
+  def Constants = rule { SpecialConstants | BooleanConstants | HexConstants }
   
   def SpecialConstants = rule { NullConst | NaConst | InfConst | NanConst }
 
   def BooleanConstants = rule { TrueConst | FalseConst }
+  
+  def HexConstants = rule { HexIntegerConst }
   
   def NullConst = rule { WhiteSpace ~ "NULL" ~ WhiteSpace ~> (() => Null) }
     
@@ -109,7 +110,9 @@ class R(val input: ParserInput) extends Parser {
   def TrueConst = rule { WhiteSpace ~ "TRUE" ~ WhiteSpace ~> (() => True) }
   
   def FalseConst = rule { WhiteSpace ~ "FALSE" ~ WhiteSpace ~> (() => False) }
-
+  
+  def HexIntegerConst: Rule1[E] = rule { "0x" ~ optional(capture(zeroOrMore(HexDigit))) ~> ((hex: Option[String]) => Integer(if (hex.isDefined) java.lang.Integer.parseInt(hex.get, 16) else 0)) }
+  
   // Comments: 10.2
   
   def Comment = rule { WhiteSpace ~ "#" ~ capture(zeroOrMore(noneOf("\n\r"))) ~> Com }
