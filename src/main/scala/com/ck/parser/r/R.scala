@@ -26,7 +26,6 @@ object Nan extends E
 object True extends E
 object False extends E
 
-
 /**
  * This Parsing Expression Grammar parses a subset of the R language.
  */
@@ -34,15 +33,13 @@ class R(val input: ParserInput) extends Parser {
 
   import CharPredicate.{Digit, Digit19, HexDigit}
   
-  def InputLine = rule {Expression | CompoundExpression ~ EOI }
+  def InputLine = rule { Expression | CompoundExpression ~ EOI }
 
   // Compound Expressions: 10.4.4
-  def CompoundExpression = rule { '{' ~ zeroOrMore(Expression ~ ';') ~ WhiteSpace ~ '}' }
+  def CompoundExpression = rule { WhiteSpace ~ '{' ~ zeroOrMore(Expression ~ ';') ~ WhiteSpace ~ '}' ~ WhiteSpace }
   
   // Operators: 10.3.6
   def Expression: Rule1[E] = rule {
-    Comment |
-    NumberRule |
     Term ~ zeroOrMore(
       WhiteSpace ~ '+' ~ WhiteSpace ~ Term ~> Add
     | WhiteSpace ~ '-' ~ WhiteSpace ~ Term ~> Sub)
@@ -61,7 +58,7 @@ class R(val input: ParserInput) extends Parser {
     | WhiteSpace ~ "^" ~ WhiteSpace ~ Factor ~> Pow)
   }
 
-  def Factor = rule { SpecialConstants | Identifier | NumberRule | Parens }
+  def Factor = rule { Comment | Constants | Identifier | NumberRule | Parens }
 
   def Parens = rule { '(' ~ Expression ~ ')' }
   
@@ -84,19 +81,23 @@ class R(val input: ParserInput) extends Parser {
   // Identifiers: 10.3.2
   def Identifier: Rule1[E] = rule { WhiteSpace ~ capture(IdentifierFirstCharacter ~ zeroOrMore(IdentifierCharactersTail)) ~ WhiteSpace ~> Ident}
   
-  def IdentifierFirstCharacter = rule { Alpha | ('.' ~ !CharPredicate.Digit) }
+  def IdentifierFirstCharacter = rule { Alpha | '.' ~ IdentifierCharactersNonNumeric}
   
   def Alpha = rule { "a" - "f" | "A" - "Z" }
   
-  def IdentifierCharactersTail = rule { "0" - "9" | "a" - "f" | "A" - "Z" | "_" | '.'}
+  def IdentifierCharactersTail = rule { "0" - "9" | IdentifierCharactersNonNumeric}
 
+  def IdentifierCharactersNonNumeric = rule { Alpha | "_" | '.' }
+  
   // Tokens: 10.3
   // Constants: 10.3.1
-  def Constants = rule { SpecialConstants | BooleanConstants }
+  def Constants = rule { SpecialConstants | BooleanConstants | HexConstants }
   
   def SpecialConstants = rule { NullConst | NaConst | InfConst | NanConst }
 
   def BooleanConstants = rule { TrueConst | FalseConst }
+  
+  def HexConstants = rule { HexIntegerConst }
   
   def NullConst = rule { WhiteSpace ~ "NULL" ~ WhiteSpace ~> (() => Null) }
     
@@ -109,7 +110,9 @@ class R(val input: ParserInput) extends Parser {
   def TrueConst = rule { WhiteSpace ~ "TRUE" ~ WhiteSpace ~> (() => True) }
   
   def FalseConst = rule { WhiteSpace ~ "FALSE" ~ WhiteSpace ~> (() => False) }
-
+  
+  def HexIntegerConst: Rule1[E] = rule { "0x" ~ optional(capture(zeroOrMore(HexDigit))) ~> ((hex: Option[String]) => Integer(if (hex.isDefined) java.lang.Integer.parseInt(hex.get, 16) else 0)) }
+  
   // Comments: 10.2
   
   def Comment = rule { WhiteSpace ~ "#" ~ capture(zeroOrMore(noneOf("\n\r"))) ~> Com }
@@ -118,35 +121,7 @@ class R(val input: ParserInput) extends Parser {
 
 object R extends App {
   override def main(args: Array[String]) = {
-   println(new R(" 1 + 1 ").InputLine.run())
-   println(new R(" 1 - 1 ").InputLine.run())
-   println(new R(" 1 * 1 ").InputLine.run())
-   println(new R(" 1 / 1 ").InputLine.run())
-   println(new R(" a ").InputLine.run())
-   println(new R(" a ").InputLine.run())
-   println(new R("{ 1 + 1 ; }").InputLine.run())
-   println(new R("{ 1 + 1 ; 2 + 2 ; }").InputLine.run())
-   println(new R("""{ 1 + 1 ; 
-2 + 2 ; }""").InputLine.run())
-   println(new R(" NULL ").InputLine.run())
-   println(new R(" NA ").InputLine.run())
-   println(new R(" Inf ").InputLine.run())
-   println(new R(" NaN ").InputLine.run())
-   println(new R(" #adf aa ").InputLine.run())
-   println(new R(""" #adf 
-aa """).InputLine.run())
-   println(new R(" TRUE ").InputLine.run())
-   println(new R(" FALSE ").InputLine.run())
-   println(new R(" 1 ").InputLine.run())
-   println(new R(" .1 ").InputLine.run())
-   println(new R(" 1.0 ").InputLine.run())
-   println(new R(" 1.0e3 ").InputLine.run())
-   println(new R(" 1.0e+3 ").InputLine.run())
-   println(new R(" 1.0e-3 ").InputLine.run())
-   println(new R(" -1 ").InputLine.run())
-   println(new R(" -1.0 ").InputLine.run())
-   println(new R(" -1.0e3 ").InputLine.run())
-   println(new R(" -1.0e+3 ").InputLine.run())
-   println(new R(" -1.0e-3 ").InputLine.run())
+    if (args.length > 0) R(args(0)) 
   }
+  def apply(s: String) = new R(s).InputLine.run()
 }
