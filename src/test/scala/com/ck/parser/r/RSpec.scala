@@ -94,16 +94,62 @@ aa """) should be(Success(Com("adf ")))
       R(" -1.0e-3 ") should be(Success(Decimal(-0.001)))
     }
   }
-  
+
   "an integer" - {
     "if valid should parse" in {
       R(" 1 ") should be(Success(Integer(1)))
     }
   }
-  
+
   "a hexidecimal constant" - {
     "if valid should parse" in {
       R("0xDEAF") should be(Success(Integer(java.lang.Integer.parseInt("DEAF", 16))))
     }
   }
+
+  "a string constant" - {
+    "if valid should parse" in {
+      R(" 'a' ") should be(Success(Str("a")))
+      R(""" "a" """) should be(Success(Str("a")))
+      R(" '\n' ") should be(Success(Str("\n")))
+      R(" '\000' ") should be(Success(Str("\000")))
+      R(""" '\u0000' """) should be(Success(Str("\u0000")))
+    }
+  }
+
+  "an assignment operator" - {
+    "if valid should parse" in {
+      R(" a <- 1 ") should be(Success(Ass(Ident("a"), Integer(1))))
+      R(" a <- 1 + 2 ") should be(Success(Ass(Ident("a"), Add(Integer(1), Integer(2)))))
+    }
+  }
+
+  "a function call" - {
+    "if valid, should parse" in {
+      R(" f ( ) ") should be(Success(FnApp(Ident("f"), Nil)))
+      R(" f ( 1 ) ") should be(Success(FnApp(Ident("f"), Vector(Integer(1)))))
+      R(" f ( 1 , 2 ) ") should be(Success(FnApp(Ident("f"), Vector(Integer(1), Integer(2)))))
+    }
+  }
+
+  "a function definition" - {
+    "if valid, should parse" in {
+      R(" function ( ) { } ") should be(Success(Fn(Nil, Nil)))
+      R(" function ( a ) { } ") should be(Success(Fn(Vector(Ident("a")), Nil)))
+      R(" function( a , b ) { } ") should be(Success(Fn(Vector(Ident("a"), Ident("b")), Nil)))
+      R("function() { 1 + 2 ; a <- 3 ; }") should be(Success(Fn(Nil, Vector(Add(Integer(1), Integer(2)), Ass(Ident("a"), Integer(3))))))
+    }
+  }
+
+  "a comparison operator" - {
+    "if valid, should parse" in {
+      R(" 1 < 2 ") should be(Success(LessThan(Integer(1),Integer(2))))
+      R(" 1 > 2 ") should be(Success(GreaterThan(Integer(1),Integer(2))))
+      R(" 1 <= 2 ") should be(Success(LessThanOrEq(Integer(1),Integer(2))))
+      R(" 1 >= 2 ") should be(Success(GreaterThanOrEq(Integer(1),Integer(2))))
+      R(" 1 == 2 ") should be(Success(Eq(Integer(1),Integer(2))))
+      R(" 1 != 2 ") should be(Success(NotEq(Integer(1),Integer(2))))
+    }
+  }
+
 }
