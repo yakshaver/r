@@ -49,3 +49,5 @@ target/
 .classpath
 .settings
 .cache
+/.cache-main
+/.cache-tests
